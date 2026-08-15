@@ -477,6 +477,83 @@ function ConnectFlow({ provider, onDone }) {
   })
 }
 
+/* ---------- router ---------- */
+
+function RouterChip() {
+  const router = useQuery({
+    queryKey: [ID, 'router-chip'],
+    queryFn: async () => ctxRest('/router/status', { method: 'GET', timeoutMs: 5000 }),
+    refetchInterval: 15000,
+    refetchIntervalInBackground: false,
+  })
+  const up = router.data && router.data.running
+  return jsxs('span', {
+    className: 'flex items-center gap-1.5 text-[11px]',
+    children: [
+      jsx('span', {
+        className: 'h-2 w-2 rounded-full',
+        style: { background: up === undefined ? '#71717a' : up ? '#3ddc84' : '#ff5252', boxShadow: up ? '0 0 6px rgba(61,220,132,0.8)' : undefined },
+      }),
+      jsx('span', { className: 'font-medium', children: up === undefined ? '…' : up ? 'up' : 'down' }),
+    ],
+  })
+}
+
+function RouterStats() {
+  const router = useQuery({
+    queryKey: [ID, 'router'],
+    queryFn: async () => {
+      const [st2, stt] = await Promise.all([
+        ctxRest('/router/status', { method: 'GET', timeoutMs: 5000 }),
+        ctxRest('/router/stats', { method: 'GET', timeoutMs: 5000 }),
+      ])
+      return { status: st2, stats: stt }
+    },
+    refetchInterval: 15000,
+    refetchIntervalInBackground: false,
+  })
+  const st = router.data && router.data.status
+  const stats = router.data && router.data.stats
+  const tiers = (stats && stats.byTier) || {}
+  const byModel = (stats && stats.byModel) || {}
+  const modelRows = Object.entries(byModel).sort((a, b) => b[1] - a[1]).slice(0, 4)
+
+  if (!st || !st.running) {
+    return jsxs('div', {
+      className: 'flex items-center justify-between text-[11px]',
+      children: [
+        jsx('span', { className: 'text-(--ui-text-tertiary)', children: 'router not running' }),
+        jsx(Button, { size: 'xs', variant: 'outline', onClick: () => ctxRest('/router/start', { method: 'POST' }), children: 'start' }),
+      ],
+    })
+  }
+
+  return jsxs('div', {
+    className: 'flex flex-col gap-1.5',
+    children: [
+      jsxs('div', {
+        className: 'grid grid-cols-4 gap-1 text-center',
+        children: ['SIMPLE', 'MEDIUM', 'COMPLEX', 'REASONING'].map(t => jsxs('div', {
+          className: 'flex flex-col rounded-md border border-(--ui-stroke-secondary) py-1',
+          children: [
+            jsx('span', { className: 'text-[9px] uppercase tracking-wide text-(--ui-text-quaternary)', children: t }),
+            jsx('span', { className: 'text-xs font-bold', children: tiers[t] || 0 }),
+          ],
+        }, t)),
+      }),
+      modelRows.length
+        ? jsxs('div', {
+            className: 'flex flex-col gap-0.5',
+            children: modelRows.map(([m, n]) => jsxs('div', {
+              className: 'flex items-center justify-between text-[10px]',
+              children: [jsx('span', { className: 'truncate font-mono text-(--ui-text-tertiary)', children: m }), jsx('span', { className: 'font-semibold', children: n })],
+            }, m)),
+          })
+        : jsx('div', { className: 'text-[10px] text-(--ui-text-quaternary)', children: 'no requests yet — route a chat through the router' }),
+    ],
+  })
+}
+
 function HubPane() {
   const qc = useQueryClient()
   const [connectProv, setConnectProv] = useState(null)
@@ -635,6 +712,21 @@ function HubPane() {
             ],
           })
         : null,
+
+      /* router strip (FreeRouter) */
+      jsxs('div', {
+        className: 'flex flex-col gap-2 rounded-xl border border-(--ui-stroke-secondary) bg-(--ui-bg-subtle) p-3',
+        children: [
+          jsxs('div', {
+            className: 'flex items-center justify-between',
+            children: [
+              jsx('span', { className: 'text-xs font-medium text-(--ui-text-secondary)', children: 'Router' }),
+              jsx(RouterChip, {}),
+            ],
+          }),
+          jsx(RouterStats, {}),
+        ],
+      }),
 
       /* providers + connect */
       jsxs('div', {
