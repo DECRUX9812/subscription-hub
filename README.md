@@ -1,4 +1,4 @@
-# 🐹 Subscription Hub
+# Subscription Hub
 
 **One pretty pane for every LLM subscription you own.** Live quota, usage
 history, provider connections, and a pet whose mood tracks how much juice
