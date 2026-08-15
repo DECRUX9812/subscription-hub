@@ -1,0 +1,4 @@
+name: subscription-hub
+version: "1.0.0"
+description: "Unified Subscription Hub — Antigravity quota, OpenCode Go usage, provider connect, proxy health."
+author: "Hermes Agent + Ritesh Patel"

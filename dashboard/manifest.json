@@ -1,0 +1,14 @@
+{
+  "name": "subscription-hub",
+  "label": "Subscriptions",
+  "description": "Unified subscriptions hub: Antigravity quota + OpenCode Go usage + provider connect + proxy health.",
+  "icon": "Gauge",
+  "version": "1.0.0",
+  "api": "plugin_api.py",
+  "entry": "plugin.js",
+  "tab": {
+    "path": "/subscription-hub",
+    "position": "end"
+  },
+  "slots": ["status-bar-right", "pane-right"]
+}

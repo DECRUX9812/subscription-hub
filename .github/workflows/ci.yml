@@ -1,0 +1,45 @@
+name: CI — syntax & sanity
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Backend syntax check
+        run: python -m py_compile dashboard/plugin_api.py
+
+      - name: Backend import check
+        run: python -c "import ast; ast.parse(open('dashboard/plugin_api.py').read())"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Desktop pane syntax check
+        run: node --check desktop/plugin.js
+
+      - name: Manifest + plugin.yaml valid
+        run: |
+          python -c "import json; json.load(open('dashboard/manifest.json')); print('manifest OK')"
+          python -c "import yaml; yaml.safe_load(open('plugin.yaml')); print('plugin.yaml OK')"
+
+      - name: Secret scan (fail if any real token patterns present)
+        run: |
+          if grep -rniE "ya29\.[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY" --include="*.py" --include="*.js" --include="*.json" --include="*.md" --include="*.sh" .; then
+            echo "❌ Secret-like content found"; exit 1
+          else
+            echo "✅ No secret patterns found"
+          fi
