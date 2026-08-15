@@ -34,6 +34,7 @@ jobs:
       - name: Manifest + plugin.yaml valid
         run: |
           python -c "import json; json.load(open('dashboard/manifest.json')); print('manifest OK')"
+          pip install --quiet pyyaml
           python -c "import yaml; yaml.safe_load(open('plugin.yaml')); print('plugin.yaml OK')"
 
       - name: Secret scan (fail if any real token patterns present)
