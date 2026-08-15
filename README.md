@@ -1,8 +1,8 @@
 # Subscription Hub
 
-**One pretty pane for every LLM subscription you own.** Live quota, usage
-history, provider connections, and a pet whose mood tracks how much juice
-you have left — right in your Hermes Desktop status bar.
+**Hermes Desktop plugin for subscription quotas, usage history, provider connections, and proxy health.**
+
+A small pet remains in the UI as a status indicator; it is not required for the quota features.
 
 [![CI](https://github.com/DECRUX9812/subscription-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/DECRUX9812/subscription-hub/actions/workflows/ci.yml)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
