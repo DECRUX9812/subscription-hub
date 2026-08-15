@@ -499,65 +499,36 @@ function RouterChip() {
   })
 }
 
-function RouterStats() {
+function RouterMini() {
   const router = useQuery({
     queryKey: [ID, 'router'],
-    queryFn: async () => {
-      const [st2, stt] = await Promise.all([
-        ctxRest('/router/status', { method: 'GET', timeoutMs: 5000 }),
-        ctxRest('/router/stats', { method: 'GET', timeoutMs: 5000 }),
-      ])
-      return { status: st2, stats: stt }
-    },
+    queryFn: async () => ctxRest('/router/stats', { method: 'GET', timeoutMs: 5000 }),
     refetchInterval: 15000,
     refetchIntervalInBackground: false,
   })
-  const st = router.data && router.data.status
-  const stats = router.data && router.data.stats
+  const stats = router.data
   const tiers = (stats && stats.byTier) || {}
-  const byModel = (stats && stats.byModel) || {}
-  const modelRows = Object.entries(byModel).sort((a, b) => b[1] - a[1]).slice(0, 4)
+  const total = Object.values(tiers).reduce((a, b) => a + (b || 0), 0)
 
-  if (!st || !st.running) {
-    return jsxs('div', {
-      className: 'flex items-center justify-between text-[11px]',
-      children: [
-        jsx('span', { className: 'text-(--ui-text-tertiary)', children: 'router not running' }),
-        jsx(Button, { size: 'xs', variant: 'outline', onClick: () => ctxRest('/router/start', { method: 'POST' }), children: 'start' }),
-      ],
-    })
+  if (!stats || router.isLoading) {
+    return jsx('span', { className: 'text-[10px] text-(--ui-text-quaternary)', children: '…' })
+  }
+  if (stats.error || total === 0) {
+    return jsx('span', { className: 'text-[10px] text-(--ui-text-quaternary)', children: 'no traffic yet' })
   }
 
-  return jsxs('div', {
-    className: 'flex flex-col gap-1.5',
-    children: [
-      jsxs('div', {
-        className: 'grid grid-cols-4 gap-1 text-center',
-        children: ['SIMPLE', 'MEDIUM', 'COMPLEX', 'REASONING'].map(t => jsxs('div', {
-          className: 'flex flex-col rounded-md border border-(--ui-stroke-secondary) py-1',
-          children: [
-            jsx('span', { className: 'text-[9px] uppercase tracking-wide text-(--ui-text-quaternary)', children: t }),
-            jsx('span', { className: 'text-xs font-bold', children: tiers[t] || 0 }),
-          ],
-        }, t)),
-      }),
-      modelRows.length
-        ? jsxs('div', {
-            className: 'flex flex-col gap-0.5',
-            children: modelRows.map(([m, n]) => jsxs('div', {
-              className: 'flex items-center justify-between text-[10px]',
-              children: [jsx('span', { className: 'truncate font-mono text-(--ui-text-tertiary)', children: m }), jsx('span', { className: 'font-semibold', children: n })],
-            }, m)),
-          })
-        : jsx('div', { className: 'text-[10px] text-(--ui-text-quaternary)', children: 'no requests yet — route a chat through the router' }),
-    ],
-  })
+  const parts = ['SIMPLE', 'MEDIUM', 'COMPLEX', 'REASONING']
+    .filter(t => tiers[t])
+    .map(t => `${t.slice(0, 1)}:${tiers[t]}`)
+
+  return jsx('span', { className: 'font-mono text-[10px] text-(--ui-text-tertiary)', children: `${total} req · ${parts.join(' ')}` })
 }
 
 function HubPane() {
   const qc = useQueryClient()
   const [connectProv, setConnectProv] = useState(null)
   const [openHistory, setOpenHistory] = useState(false)
+  const [showExtra, setShowExtra] = useState(false)
 
   const quota = useQuery({
     queryKey: [ID, 'quota'],
@@ -604,60 +575,36 @@ function HubPane() {
   return jsxs('div', {
     className: 'flex h-full flex-col gap-3 p-3 text-sm',
     children: [
-      /* header with pet */
+      /* header with pet — one line of truth */
       jsxs('div', {
         className: 'flex items-center gap-3 rounded-xl border border-(--ui-stroke-secondary) bg-(--ui-bg-subtle) p-3',
         children: [
-          jsx(Pet, { mood, size: 72 }),
+          jsx(Pet, { mood, size: 56 }),
           jsxs('div', {
-            className: 'flex min-w-0 flex-col gap-0.5',
+            className: 'flex min-w-0 flex-1 flex-col gap-0.5',
             children: [
-              jsx('div', { className: 'flex items-center gap-2' }),
-              jsx('span', { className: 'text-base font-semibold text-(--ui-text-primary)', children: 'Subscription Hub' }),
+              jsx('span', { className: 'truncate text-sm font-semibold text-(--ui-text-primary)', children: 'Subscriptions' }),
               jsx('span', {
-                className: 'text-[11px]',
+                className: 'truncate text-[11px]',
                 style: { color: frac === null ? 'var(--ui-text-tertiary)' : tone(frac).text },
-                children: moodLabel(mood) + (frac === null ? '' : ` — ${pct(frac)}% of lowest window left`),
-              }),
-              d && d.account
-                ? jsx('span', { className: 'truncate text-[10px] text-(--ui-text-quaternary)', children: `account: ${d.account}` })
-                : null,
-            ],
-          }),
-          jsx('div', { className: 'ml-auto shrink-0' }),
-          quota.isError || d?.error
-            ? jsx(Badge, { tone: 'danger', children: 'error' })
-            : jsx(Badge, { tone: 'ok', children: 'live' }),
-        ],
-      }),
-
-      /* proxy status strip */
-      jsxs('div', {
-        className: 'grid grid-cols-3 gap-2 text-xs',
-        children: [
-          jsxs('div', {
-            className: 'flex flex-col gap-0.5 rounded-md border border-(--ui-stroke-secondary) p-2',
-            children: [
-              jsx('span', { className: 'text-[10px] text-(--ui-text-quaternary)', children: 'proxy' }),
-              jsx('span', {
-                className: 'font-medium',
-                style: { color: st ? (st.proxy_up ? '#3ddc84' : '#ff5252') : 'var(--ui-text-tertiary)' },
-                children: st ? (st.proxy_up ? 'up' : 'down') : '…',
+                children: frac === null ? moodLabel(mood) : `${pct(frac)}% left · ${moodLabel(mood)}`,
               }),
             ],
           }),
           jsxs('div', {
-            className: 'flex flex-col gap-0.5 rounded-md border border-(--ui-stroke-secondary) p-2',
+            className: 'flex shrink-0 flex-col items-end gap-1',
             children: [
-              jsx('span', { className: 'text-[10px] text-(--ui-text-quaternary)', children: 'models' }),
-              jsx('span', { className: 'font-medium', children: st ? st.model_count : '…' }),
-            ],
-          }),
-          jsxs('div', {
-            className: 'flex flex-col gap-0.5 rounded-md border border-(--ui-stroke-secondary) p-2',
-            children: [
-              jsx('span', { className: 'text-[10px] text-(--ui-text-quaternary)', children: 'latency' }),
-              jsx('span', { className: 'font-medium', children: st ? `${st.latency_ms ?? '—'} ms` : '…' }),
+              jsxs('span', {
+                className: 'flex items-center gap-1 text-[10px] text-(--ui-text-quaternary)',
+                children: [
+                  jsx('span', {
+                    className: 'h-1.5 w-1.5 rounded-full',
+                    style: { background: st ? (st.proxy_up ? '#3ddc84' : '#ff5252') : 'var(--ui-text-tertiary)' },
+                  }),
+                  jsx('span', { children: st ? (st.proxy_up ? 'proxy up' : 'proxy down') : '…' }),
+                ],
+              }),
+              jsx('span', { className: 'text-[10px] text-(--ui-text-quaternary)', children: st ? `${st.model_count} models` : '' }),
             ],
           }),
         ],
@@ -713,34 +660,59 @@ function HubPane() {
           })
         : null,
 
-      /* router strip (FreeRouter) */
+      /* router — one compact line */
       jsxs('div', {
-        className: 'flex flex-col gap-2 rounded-xl border border-(--ui-stroke-secondary) bg-(--ui-bg-subtle) p-3',
+        className: 'flex items-center justify-between rounded-xl border border-(--ui-stroke-secondary) bg-(--ui-bg-subtle) px-3 py-2',
         children: [
-          jsxs('div', {
-            className: 'flex items-center justify-between',
-            children: [
-              jsx('span', { className: 'text-xs font-medium text-(--ui-text-secondary)', children: 'Router' }),
-              jsx(RouterChip, {}),
-            ],
-          }),
-          jsx(RouterStats, {}),
+          jsxs('div', { className: 'flex items-center gap-2', children: [
+            jsx('span', { className: 'text-xs font-medium text-(--ui-text-secondary)', children: 'Router' }),
+            jsx(RouterChip, {}),
+          ]}),
+          jsx(RouterMini, {}),
         ],
       }),
 
-      /* providers + connect */
+      /* more (OpenCode + providers) — collapsible */
       jsxs('div', {
         className: 'flex flex-col gap-2',
         children: [
-          jsx('span', { className: 'text-xs font-medium text-(--ui-text-secondary)', children: 'Providers' }),
-          provs.length
-            ? provs.map(p => jsx(ProviderCard, { p, onConnect: setConnectProv, key: p.id }))
-            : jsx(Skeleton, { className: 'h-12 w-full' }),
-          connectProv ? jsx(ConnectFlow, { provider: connectProv, onDone: () => {
-            setConnectProv(null)
-            qc.invalidateQueries({ queryKey: [ID, 'quota'] })
-            qc.invalidateQueries({ queryKey: [ID, 'providers'] })
-          } }) : null,
+          jsxs('button', {
+            className: 'flex w-full items-center justify-between rounded-xl border border-(--ui-stroke-secondary) bg-(--ui-bg-subtle) px-3 py-2 text-left transition-colors hover:bg-(--ui-bg-hover)',
+            onClick: () => { haptic('tap'); setShowExtra(s => !s) },
+            children: [
+              jsx('span', { className: 'text-xs font-medium text-(--ui-text-secondary)', children: 'More' }),
+              jsx('span', { className: 'text-[10px] text-(--ui-text-quaternary)', children: showExtra ? '▾ hide' : '▸ opencode · providers' }),
+            ],
+          }),
+          showExtra
+            ? jsxs('div', { className: 'flex flex-col gap-3', children: [
+                (opencode.rolling || opencode.weekly || opencode.monthly)
+                  ? jsxs('div', {
+                      className: 'flex flex-col gap-2',
+                      children: [
+                        jsx('span', { className: 'text-xs font-medium text-(--ui-text-secondary)', children: 'OpenCode Go' }),
+                        jsx(OcRow, { label: 'rolling', d: opencode.rolling, nowMs: Date.now() }),
+                        jsx(OcRow, { label: 'weekly', d: opencode.weekly, nowMs: Date.now() }),
+                        jsx(OcRow, { label: 'monthly', d: opencode.monthly, nowMs: Date.now() }),
+                      ],
+                    })
+                  : null,
+                jsxs('div', {
+                  className: 'flex flex-col gap-2',
+                  children: [
+                    jsx('span', { className: 'text-xs font-medium text-(--ui-text-secondary)', children: 'Providers' }),
+                    provs.length
+                      ? provs.map(p => jsx(ProviderCard, { p, onConnect: setConnectProv, key: p.id }))
+                      : jsx(Skeleton, { className: 'h-12 w-full' }),
+                    connectProv ? jsx(ConnectFlow, { provider: connectProv, onDone: () => {
+                      setConnectProv(null)
+                      qc.invalidateQueries({ queryKey: [ID, 'quota'] })
+                      qc.invalidateQueries({ queryKey: [ID, 'providers'] })
+                    } }) : null,
+                  ],
+                }),
+              ]})
+            : null,
         ],
       }),
     ],
