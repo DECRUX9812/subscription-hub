@@ -273,7 +273,7 @@ function HubChip() {
       : `◇ ${pct(frac)}%`
 
   return jsx(Tip, {
-    label: 'Subscription Hub — click to refresh',
+    label: 'Subscription Hub: click to refresh',
     children: jsx('button', {
       type: 'button',
       className: cn(
@@ -326,7 +326,7 @@ function BucketCard({ b, nowMs, serverTs, threshold }) {
         ],
       }),
       jsx(AnimatedBar, { frac }),
-      low ? jsx('div', { className: 'text-[10px] text-(--ui-accent)', children: '⚠ low — top up soon' }) : null,
+      low ? jsx('div', { className: 'text-[10px] text-(--ui-accent)', children: '⚠ low: top up soon' }) : null,
     ],
   })
 }
@@ -344,7 +344,7 @@ function OcRow({ label, d, nowMs }) {
         className: 'flex items-center gap-1.5 text-[11px]',
         children: [
           jsx('span', { className: 'font-medium text-(--ui-text-primary)', children: label }),
-          jsx('span', { className: 'ml-auto font-mono', style: { color: t.text }, children: usedNum == null ? '—' : `${usedNum}% used` }),
+          jsx('span', { className: 'ml-auto font-mono', style: { color: t.text }, children: usedNum == null ? '–' : `${usedNum}% used` }),
           jsx('span', { className: 'font-mono text-[10px] text-(--ui-text-tertiary)', children: reset != null ? `resets ${fmtCountdown(reset)}` : '' }),
         ],
       }),
